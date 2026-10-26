@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>An Intelligent Radiologist Assistant</title>
+<style>
+:root{--paper:#F4F2ED;--ink:#111111;--red:#E1251B;--gm:#9A9894;--gp:#DDDAD3;--w:#FFFFFF;--hair:rgba(17,17,17,.2);--font:"Helvetica Neue",Helvetica,Inter,Arial,sans-serif}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--gp);font-family:var(--font);color:var(--ink);overflow:hidden;font-variant-numeric:tabular-nums;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+h1,h2,h3{font-size:inherit;font-weight:inherit}
+b{font-weight:700}
+var{font-style:italic}
+sub,sup{font-size:.65em;line-height:0}
+#wrap{position:fixed;left:0;right:0;top:0;bottom:44px}
+#stage{position:absolute;left:50%;top:50%;width:1600px;height:900px;margin:-450px 0 0 -800px;background:var(--paper);transform-origin:center center;overflow:hidden}
+.slide{position:absolute;left:0;top:0;width:1600px;height:900px;opacity:0;visibility:hidden;transition:opacity 160ms ease-out,visibility 0s linear 160ms;overflow:hidden;background:var(--paper)}
+.slide.active{opacity:1;visibility:visible;transition:opacity 160ms ease-out}
+@keyframes in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.slide.active>*:not(.hdr){animation:in 180ms ease-out both;animation-delay:calc(var(--i,0)*40ms)}
+.hdr{position:absolute;left:96px;right:96px;top:0;height:72px}
+.hdr .lab{position:absolute;left:0;top:34px}
+.hdr .mark{position:absolute;right:0;top:34px}
+.hdr .hr{position:absolute;left:0;right:0;top:72px;height:1px;background:var(--hair)}
+.a{position:absolute}
+.col{position:absolute;left:calc(96px + (var(--c) - 1)*119.3333px);width:calc(var(--s)*119.3333px - 24px)}
+.h{position:absolute;font-weight:700;line-height:.86;letter-spacing:-.04em;font-size:88px}
+.l{font-size:13px;line-height:1.2;letter-spacing:.12em;text-transform:uppercase}
+.g{color:var(--gm)}.r{color:var(--red)}
+.b{font-size:22px;line-height:1.45}
+.st{font-size:34px;line-height:1.1;letter-spacing:-.02em}
+.cap{position:absolute;left:96px;top:812px;font-size:16px;line-height:1.35;letter-spacing:.01em;color:var(--gm)}
+.cap b{color:var(--red)}
+svg{font-family:inherit}
+svg.d{position:absolute}
+.hls p{padding:16px 0;border-top:1px solid var(--hair)}
+.hls p:last-child{border-bottom:1px solid var(--hair)}
+.rail{position:absolute;left:calc(96px + 10*119.3333px);width:214.67px;top:100px;padding-left:16px;border-left:1px solid var(--hair);font-size:16px;line-height:1.35}
+.rail .l{color:var(--red);margin-bottom:12px}
+.rail p{padding:12px 0;border-top:1px solid var(--hair)}
+.rail.w{left:1050.67px;width:453.33px;font-size:22px;line-height:1.4}
+.ed{position:absolute;padding:8px 0 8px 16px;border-left:2px solid var(--red);font-size:16px;line-height:1.35}
+.ed:before,.ed:after{content:"";position:absolute;left:-2px;width:10px;height:2px;background:var(--red)}
+.ed:before{top:0}.ed:after{bottom:0}
+.ed .l{color:var(--red);margin-bottom:6px}
+.nt{position:absolute;border:1px solid var(--ink);padding:14px 18px;font-size:16px;line-height:1.4}
+.nt.r{border-color:var(--red);color:var(--ink)}
+.tile{border:1px solid var(--ink);padding:14px;display:flex;flex-direction:column;justify-content:space-between;height:220px}
+.tile .v{font-size:96px;line-height:1;letter-spacing:-.02em}
+.tile .c{font-size:16px;color:var(--gm);line-height:1.2}
+.card{border:1px solid var(--ink);padding:20px;display:flex;flex-direction:column;gap:10px}
+.card h3{font-size:22px;font-weight:700;line-height:1.15;min-height:76px;letter-spacing:-.01em}
+.card p{font-size:22px;line-height:1.25}
+.pn{border:1px solid var(--ink);display:flex;flex-direction:column}
+.pn div.t{padding:12px}
+.pn p{font-size:16px;line-height:1.35;margin-top:8px}
+.rw{display:grid;grid-template-columns:453px 1fr;align-items:center;height:66px;border-top:1px solid var(--hair)}
+.rw:last-child{border-bottom:1px solid var(--hair)}
+.r18{display:grid;grid-template-columns:830px 1fr;align-items:center;height:88px;border-top:1px solid var(--hair);position:relative}
+.r18:last-child{border-bottom:1px solid var(--hair)}
+.r18 p{font-size:16px;line-height:1.35;padding-right:24px}
+.r18 b{color:var(--red)}
+.pp{position:absolute;left:96px;width:170px;height:48px;border:1px solid var(--ink);display:flex;align-items:center;padding:0 12px;font-size:16px;font-weight:700}
+.trk{height:64px;display:grid;grid-template-columns:30px 210px 1fr 190px;align-items:center;border-bottom:1px solid var(--ink)}
+.trk:first-child{border-top:1px solid var(--ink)}
+.trk .mk{width:12px;height:12px;background:var(--ink)}
+.trk .mk.o{background:none;border:1px solid var(--ink)}
+.trk h3{font-size:20px;font-weight:700;line-height:1.1;letter-spacing:-.01em}
+.trk p{font-size:16px;line-height:1.35}
+.rm{position:absolute;top:440px;width:262.4px}
+.rm h3{font-size:22px;font-weight:700;line-height:1.15;margin-bottom:10px}
+.rm p{font-size:22px;line-height:1.35}
+#grid{position:absolute;left:0;top:0;width:1600px;height:900px;pointer-events:none;display:none;z-index:40}
+#grid.on{display:block}
+#grid i{position:absolute;top:0;bottom:0;width:95.3333px;background:rgba(225,37,27,.08);border-left:1px solid rgba(225,37,27,.3);border-right:1px solid rgba(225,37,27,.3)}
+#bar{position:fixed;left:0;right:0;bottom:0;height:44px;background:var(--paper);border-top:1px solid var(--hair);display:flex;align-items:center;gap:24px;padding:0 24px;font-size:13px;letter-spacing:.12em;text-transform:uppercase;z-index:70}
+#prog{flex:1;height:1px;background:var(--hair);position:relative}
+#prog i{position:absolute;left:0;top:-1px;height:3px;background:var(--red);width:0;transition:width 160ms ease-out}
+#bar .hint{color:var(--gm)}
+button{font:inherit;letter-spacing:inherit;text-transform:inherit;color:var(--ink);background:none;border:1px solid var(--ink);border-radius:2px;padding:6px 12px;cursor:pointer}
+button:hover{background:var(--ink);color:var(--paper)}
+:focus-visible{outline:2px solid var(--red);outline-offset:2px}
+#ov{position:fixed;left:0;right:0;top:0;bottom:44px;background:var(--gp);overflow:auto;padding:32px;display:none;z-index:60}
+#ov.on{display:grid;grid-template-columns:repeat(auto-fill,320px);gap:16px;align-content:start;justify-content:center}
+.thumb{width:320px;height:180px;position:relative;overflow:hidden;padding:0;border:1px solid var(--ink);background:var(--paper)}
+.thumb:hover{background:var(--paper)}
+.thumb.cur{outline:2px solid var(--red);outline-offset:1px}
+.thumb .slide{opacity:1;visibility:visible;transform:scale(.2);transform-origin:0 0;pointer-events:none}
+.thumb .slide>*{animation:none!important}
+@media (max-width:760px){#bar .hint{display:none}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+@page{size:A4 landscape;margin:0}
+@media print{
+html,body{height:auto;overflow:visible;background:var(--paper)}
+#bar,#grid,#ov{display:none!important}
+#wrap{position:static}
+#stage{position:static;margin:0;transform:none!important;width:auto;height:auto;background:none;overflow:visible}
+.slide{position:relative;opacity:1!important;visibility:visible!important;display:block;width:1600px;height:900px;zoom:.7019;margin-top:115px;break-after:page;page-break-after:always}
+.slide:last-of-type{break-after:auto;page-break-after:auto}
+.slide>*{animation:none!important}
+}
+</style>
+</head>
+<body>
+<div id="wrap"><div id="stage">
+
+<!-- 01 COVER -->
+<section class="slide" data-sec="COVER">
+<h1 class="h" style="left:96px;top:104px;width:1194px;font-size:100px">An Intelligent<br>Radiologist Assistant</h1>
+<p class="a st" style="left:96px;top:330px;width:1050px">Hybrid CNN–Transformer segmentation of chest radiographs with region detection and multi-method explainability</p>
+<i class="a" style="left:0;right:0;top:558px;height:2px;background:var(--ink)"></i>
+<div class="col b" style="--c:1;--s:4;top:596px">M Ninad Suryaksha<br>J Mohammad Mudassir<br>Anupal Maji</div>
+<div class="col b" style="--c:5;--s:3;top:596px">Dept. of CSE<br>Alliance University<br>Bengaluru, India</div>
+<div class="col l" style="--c:8;--s:5;top:600px;text-align:right;line-height:2.2">Segmentation<br>Region detection<br>Explainability</div>
+<p class="nt" style="left:96px;top:770px;width:580px">Reference implementation. Trained on public lung-field masks. Research prototype — not a diagnostic device.</p>
+<i class="a" style="left:1464px;top:800px;width:40px;height:40px;background:var(--red)"></i>
+</section>
+
+<!-- 02 PROBLEM -->
+<section class="slide" data-sec="THE PROBLEM">
+<h2 class="h" style="left:96px;top:104px;width:770px">A number is not an explanation.</h2>
+<div class="col st hls" style="--c:1;--s:5;top:330px"><p>A model says 95% pneumonia.</p><p>It does not say where.</p><p>The radiologist cannot check its work.</p></div>
+<svg class="d" style="left:693px;top:290px" width="572" height="440" viewBox="0 0 572 440" role="img" aria-label="A chest radiograph drawn as a flat grey rectangle with the number 0.95 over it and a dashed red question mark where the lesion should be shown."><title>Scalar output with no spatial evidence</title>
+<rect x=".5" y=".5" width="571" height="439" fill="#DDDAD3" stroke="#111"/>
+<ellipse cx="190" cy="230" rx="100" ry="150" fill="none" stroke="#9A9894"/>
+<ellipse cx="382" cy="230" rx="100" ry="150" fill="none" stroke="#9A9894"/>
+<text x="286" y="215" text-anchor="middle" font-size="150" font-weight="700" letter-spacing="-6" fill="#111">0.95</text>
+<circle cx="170" cy="335" r="52" fill="none" stroke="#E1251B" stroke-width="2" stroke-dasharray="7 5"/>
+<text x="170" y="368" text-anchor="middle" font-size="96" font-weight="700" fill="none" stroke="#E1251B" stroke-width="2">?</text>
+</svg>
+<div class="rail"><div class="l">≠ Existing tools</div><p>Most public pneumonia models are classifiers. Their output is a single number attached to the whole image.</p></div>
+<p class="cap" style="width:560px">Chest radiography is the most frequently performed diagnostic imaging examination.</p>
+<p class="cap" style="left:693px;top:742px;width:572px"><b>Fig. A</b> — Existing pipelines return a scalar. The spatial evidence is discarded.</p>
+</section>
+
+<!-- 03 CATEGORIES -->
+<section class="slide" data-sec="LANDSCAPE / EXISTING APPROACHES">
+<h2 class="h" style="left:96px;top:104px;width:1169px;font-size:64px;line-height:.92;letter-spacing:-.03em">What’s already out there — and what it leaves out.</h2>
+<div class="a" style="left:96px;top:270px;width:1169.33px;height:500px;display:grid;grid-template-columns:repeat(4,1fr);gap:24px">
+<div class="card"><svg width="234" height="84" viewBox="0 0 234 84" role="img" aria-label="Image in, one number out"><title>Classification CNN</title><rect x=".5" y="6.5" width="72" height="72" fill="#DDDAD3" stroke="#111"/><rect x="86" y="40" width="40" height="3" fill="#111"/><polygon points="126,34 140,41.5 126,49" fill="#111"/><rect x="152.5" y="24.5" width="56" height="36" fill="none" stroke="#111"/><text x="180.5" y="49" text-anchor="middle" font-size="18" font-weight="700">p</text></svg>
+<div class="l g">01</div><h3>Classification CNN</h3><div><div class="l g">Output</div><p>One probability</p></div><div><div class="l r">Blind spot</div><p>No spatial evidence.</p></div></div>
+<div class="card"><svg width="234" height="84" viewBox="0 0 234 84" role="img" aria-label="Image in, opaque black box out"><title>Commercial CAD score</title><rect x=".5" y="6.5" width="72" height="72" fill="#DDDAD3" stroke="#111"/><rect x="86" y="40" width="40" height="3" fill="#111"/><polygon points="126,34 140,41.5 126,49" fill="#111"/><rect x="152" y="24" width="57" height="37" fill="#111"/><text x="180.5" y="50" text-anchor="middle" font-size="22" font-weight="700" fill="#FFFFFF">?</text></svg>
+<div class="l g">02</div><h3>Commercial CAD score</h3><div><div class="l g">Output</div><p>Opaque score</p></div><div><div class="l r">Blind spot</div><p>Cannot be audited.</p></div></div>
+<div class="card"><svg width="234" height="84" viewBox="0 0 234 84" role="img" aria-label="Image in, mask out"><title>Pure-CNN U-Net</title><rect x=".5" y="6.5" width="72" height="72" fill="#DDDAD3" stroke="#111"/><rect x="86" y="40" width="40" height="3" fill="#111"/><polygon points="126,34 140,41.5 126,49" fill="#111"/><rect x="152.5" y="6.5" width="72" height="72" fill="#F4F2ED" stroke="#111"/><ellipse cx="174" cy="42" rx="14" ry="28" fill="#111"/><ellipse cx="203" cy="42" rx="14" ry="28" fill="#111"/></svg>
+<div class="l g">03</div><h3>Pure-CNN U-Net</h3><div><div class="l g">Output</div><p>Mask</p></div><div><div class="l r">Blind spot</div><p>Local receptive field, no global left–right context.</p></div></div>
+<div class="card"><svg width="234" height="84" viewBox="0 0 234 84" role="img" aria-label="Image in, coarse rectangles out"><title>Bounding-box detector</title><rect x=".5" y="6.5" width="72" height="72" fill="#DDDAD3" stroke="#111"/><rect x="86" y="40" width="40" height="3" fill="#111"/><polygon points="126,34 140,41.5 126,49" fill="#111"/><rect x="152.5" y="6.5" width="72" height="72" fill="#F4F2ED" stroke="#111"/><rect x="164" y="18" width="28" height="22" fill="none" stroke="#111" stroke-width="2"/><rect x="186" y="46" width="30" height="24" fill="none" stroke="#111" stroke-width="2"/></svg>
+<div class="l g">04</div><h3>Bounding-box detector (YOLO / Faster R-CNN)</h3><div><div class="l g">Output</div><p>Coarse rectangles</p></div><div><div class="l r">Blind spot</div><p>Rectangles cannot express lesion shape.</p></div></div>
+</div>
+<div class="rail"><div class="l">≠ Existing tools</div><p>None of these four combine dense output, global context, explanation and calibrated uncertainty in one pipeline. That combination is the gap this work fills.</p></div>
+<p class="cap"><b>Fig. B</b> — Four categories of existing approach, compared on capability.</p>
+</section>
+
+<!-- 04 THESIS -->
+<section class="slide" data-sec="THESIS">
+<h2 class="h" style="left:96px;top:100px;width:700px;font-size:112px">Show me the pixels.</h2>
+<p class="col b" style="--c:1;--s:4;top:350px">The model’s output is itself a spatial map. That single design decision turns an opaque classifier into something a radiologist can inspect, disagree with, and correct.</p>
+<svg class="d" style="left:565px;top:300px" width="700" height="500" viewBox="0 0 700 500" role="img" aria-label="The scalar 0.95 becomes a per-pixel probability map, drawn as flat bands from grey pale through grey mid and red to ink."><title>Scalar to per-pixel map</title>
+<text x="0" y="278" font-size="56" font-weight="700" letter-spacing="-2" fill="#111">0.95</text>
+<rect x="128" y="247" width="42" height="6" fill="#E1251B"/><polygon points="168,232 192,250 168,268" fill="#E1251B"/>
+<rect x="200.5" y=".5" width="499" height="499" fill="#DDDAD3" stroke="#111"/>
+<g transform="rotate(-6 330 250)"><ellipse cx="330" cy="250" rx="105" ry="190" fill="#9A9894"/><ellipse cx="330" cy="250" rx="78" ry="150" fill="#E1251B"/><ellipse cx="330" cy="250" rx="42" ry="98" fill="#111"/></g>
+<g transform="rotate(6 570 250)"><ellipse cx="570" cy="250" rx="105" ry="190" fill="#9A9894"/><ellipse cx="570" cy="250" rx="78" ry="150" fill="#E1251B"/><ellipse cx="570" cy="250" rx="42" ry="98" fill="#111"/></g>
+</svg>
+<div class="rail"><div class="l">≠ Existing tools</div><p><b>Most tools:</b> one probability number. <b>This:</b> a per-pixel map you can overlay on the film and argue with.</p></div>
+<p class="cap" style="left:565px;top:812px"><b>Fig. C</b> — Scalar probability → per-pixel probability map.</p>
+</section>
+
+<!-- 05 PIPELINE -->
+<section class="slide" data-sec="METHOD / PIPELINE">
+<h2 class="h" style="left:96px;top:104px;width:931px">Six stages. One probability map.</h2>
+<svg class="d" style="left:96px;top:276px" width="931" height="514" viewBox="0 0 931 514" role="img" aria-label="Six-stage vertical pipeline from chest X-ray to outputs."><title>End-to-end pipeline</title>
+<g stroke="#111" fill="#F4F2ED">
+<rect x=".5" y=".5" width="930" height="63"/><rect x=".5" y="90.5" width="930" height="63"/><rect x=".5" y="180.5" width="930" height="63"/><rect x="1" y="271" width="929" height="62" stroke-width="2"/><rect x=".5" y="360.5" width="930" height="63"/><rect x=".5" y="450.5" width="930" height="63" fill="#E1251B" stroke="#E1251B"/>
+</g>
+<g fill="#111"><polygon points="460,81 470,81 465,90"/><polygon points="460,171 470,171 465,180"/><polygon points="460,261 470,261 465,270"/><polygon points="460,351 470,351 465,360"/><polygon points="460,441 470,441 465,450"/>
+<rect x="464" y="64" width="2" height="17"/><rect x="464" y="154" width="2" height="17"/><rect x="464" y="244" width="2" height="17"/><rect x="464" y="334" width="2" height="17"/><rect x="464" y="424" width="2" height="17"/></g>
+<g font-size="13" letter-spacing="1.5" fill="#9A9894"><text x="18" y="37">01</text><text x="18" y="127">02</text><text x="18" y="217">03</text><text x="18" y="307">04</text><text x="18" y="397">05</text></g>
+<text x="18" y="487" font-size="13" letter-spacing="1.5" fill="#FFFFFF">06</text>
+<g font-size="22" fill="#111"><text x="64" y="40">Chest X-ray + expert mask</text><text x="64" y="130">CLAHE (clip 2.0, 8×8 tiles)</text><text x="64" y="220">Resize 256×256, 3-channel, ImageNet normalisation</text><text x="64" y="310" font-weight="700">Hybrid ResNet-34 + Transformer + U-Net decoder</text><text x="64" y="400">Sigmoid: per-pixel probability map <tspan font-style="italic">P</tspan> ∈ [0, 1]</text></g>
+<g font-size="20" fill="#FFFFFF"><text x="64" y="479">Outputs: contours · region boxes · heatmap overlay ·</text><text x="64" y="503">Seg-Grad-CAM · attention rollout · uncertainty</text></g>
+<g font-size="13" fill="#9A9894" text-anchor="end"><text x="912" y="127">8-bit · H×W</text><text x="912" y="217">256×256×3</text><text x="912" y="307">8×8×512 bottleneck</text><text x="912" y="397">256×256×1</text></g>
+</svg>
+<div class="rail w" style="top:276px"><div class="l">≠ Existing tools</div><p><b>Most tools:</b> stop at stage 2, then attach a classifier head.</p><p><b>This:</b> stages 3–6 — a dense map, region boxes and five explanations from one forward pass.</p></div>
+<p class="cap" style="top:806px"><b>Fig. 1</b> — End-to-end pipeline.</p>
+</section>
+
+<!-- 06 CLAHE -->
+<section class="slide" data-sec="METHOD / PREPROCESSING">
+<h2 class="h" style="left:96px;top:104px;width:931px">Making the invisible visible.</h2>
+<svg class="d" style="left:96px;top:290px" width="920" height="420" viewBox="0 0 920 420" role="img" aria-label="Two chest X-ray rectangles side by side. The left is low contrast; the right is contrast-stretched with an 8 by 8 red tile grid and one tile annotated clip limit 2.0."><title>CLAHE before and after</title>
+<text x="0" y="16" font-size="13" letter-spacing="1.5" fill="#9A9894">BEFORE</text><text x="420" y="16" font-size="13" letter-spacing="1.5" fill="#9A9894">AFTER · CLAHE</text>
+<rect x=".5" y="30.5" width="359" height="359" fill="#DDDAD3" stroke="#111"/>
+<ellipse cx="115" cy="215" rx="62" ry="110" fill="#F4F2ED"/><ellipse cx="245" cy="215" rx="62" ry="110" fill="#F4F2ED"/>
+<rect x="420.5" y="30.5" width="359" height="359" fill="#DDDAD3" stroke="#111"/>
+<ellipse cx="535" cy="215" rx="62" ry="110" fill="#9A9894"/><ellipse cx="665" cy="215" rx="62" ry="110" fill="#9A9894"/>
+<g stroke="#111" fill="none"><path d="M485 160Q535 148 585 160"/><path d="M480 210Q535 198 590 210"/><path d="M485 260Q535 248 585 260"/><path d="M615 160Q665 148 715 160"/><path d="M610 210Q665 198 720 210"/><path d="M615 260Q665 248 715 260"/></g>
+<g stroke="#E1251B" stroke-opacity=".4"><path d="M465 30V390M510 30V390M555 30V390M600 30V390M645 30V390M690 30V390M735 30V390M420 75H780M420 120H780M420 165H780M420 210H780M420 255H780M420 300H780M420 345H780"/></g>
+<rect x="600.5" y="120.5" width="45" height="45" fill="none" stroke="#E1251B" stroke-width="2"/>
+<path d="M646 142.5H800" stroke="#E1251B"/><text x="808" y="148" font-size="16" fill="#E1251B">clip limit 2.0</text>
+</svg>
+<div class="col b" style="--c:9;--s:4;top:290px"><p>Global equalisation stretches one histogram over the whole film, so local detail is lost.</p><p style="margin-top:14px">CLAHE equalises 64 tiles separately, recovering contrast where it is weakest.</p><p style="margin-top:14px">The clip limit caps each tile’s histogram, so noise is not amplified into fake edges.</p></div>
+<div class="ed" style="left:1051px;top:650px;width:453px"><div class="l">→ Earlier detection</div>Contrast that adapts per tile makes faint basal and apical opacities visible before they become obvious.</div>
+<p class="cap" style="top:730px"><b>Fig. 3</b> — CLAHE, clip limit 2.0, 8×8 tile grid.</p>
+</section>
+
+<!-- 07 ARCHITECTURE -->
+<section class="slide" data-sec="METHOD / ARCHITECTURE">
+<h2 class="h" style="left:96px;top:100px;width:1169px;font-size:64px;line-height:.92;letter-spacing:-.03em">Two eyes on every scan.</h2>
+<svg class="d" style="left:96px;top:190px" width="1169" height="540" viewBox="0 0 1169 540" role="img" aria-label="Hybrid architecture: ResNet-34 encoder descending on the left, Transformer bottleneck at the bottom, U-Net decoder ascending on the right, with dashed skip connections."><title>Hybrid ResNet-34 / Transformer / U-Net</title>
+<g stroke="#111">
+<rect x=".5" y=".5" width="299" height="55" fill="#F4F2ED"/><rect x=".5" y="96.5" width="299" height="55" fill="#DDDAD3"/><rect x=".5" y="192.5" width="299" height="55" fill="#DDDAD3"/><rect x=".5" y="288.5" width="299" height="55" fill="#DDDAD3"/><rect x=".5" y="384.5" width="299" height="55" fill="#DDDAD3"/><rect x=".5" y="480.5" width="299" height="55" fill="#DDDAD3"/>
+<rect x="869.5" y=".5" width="299" height="55" fill="#FFFFFF"/><rect x="869.5" y="96.5" width="299" height="55" fill="#FFFFFF"/><rect x="869.5" y="192.5" width="299" height="55" fill="#FFFFFF"/><rect x="869.5" y="288.5" width="299" height="55" fill="#FFFFFF"/><rect x="869.5" y="384.5" width="299" height="55" fill="#FFFFFF"/>
+</g>
+<rect x="340" y="476" width="489" height="64" fill="#111"/>
+<g font-size="17" font-weight="700" fill="#111"><text x="16" y="24">Input</text><text x="16" y="120">Stem /2</text><text x="16" y="216">Layer1 /4</text><text x="16" y="312">Layer2 /8</text><text x="16" y="408">Layer3 /16</text><text x="16" y="504">Layer4 /32</text>
+<text x="885" y="24">Up+Dec0 → 1×1 conv</text><text x="885" y="120">Up+Dec1</text><text x="885" y="216">Up+Dec2</text><text x="885" y="312">Up+Dec3</text><text x="885" y="408">Up+Dec4</text></g>
+<g font-size="14" fill="#111"><text x="16" y="44">256×256×3</text><text x="16" y="140">128×128×64</text><text x="16" y="236">64×64×64</text><text x="16" y="332">32×32×128</text><text x="16" y="428">16×16×256</text><text x="16" y="524">8×8×512</text>
+<text x="885" y="44">256×256×1 · sigmoid</text><text x="885" y="140">128×128×32</text><text x="885" y="236">64×64×64</text><text x="885" y="332">32×32×128</text><text x="885" y="428">16×16×256</text></g>
+<g font-size="15" fill="#FFFFFF"><text x="356" y="502" font-weight="700">Transformer bottleneck: 1×1 conv → 64 tokens (d=512)</text><text x="356" y="524">+ positional embedding → 4 layers, 8 heads → 1×1 conv</text></g>
+<g fill="#111"><rect x="149" y="56" width="2" height="31"/><polygon points="145,87 155,87 150,96"/><rect x="149" y="152" width="2" height="31"/><polygon points="145,183 155,183 150,192"/><rect x="149" y="248" width="2" height="31"/><polygon points="145,279 155,279 150,288"/><rect x="149" y="344" width="2" height="31"/><polygon points="145,375 155,375 150,384"/><rect x="149" y="440" width="2" height="31"/><polygon points="145,471 155,471 150,480"/>
+<rect x="300" y="507" width="30" height="2"/><polygon points="330,502 340,508 330,514"/>
+<rect x="829" y="507" width="191" height="2"/><rect x="1018" y="449" width="2" height="59"/><polygon points="1014,449 1024,449 1019,440"/>
+<rect x="1018" y="353" width="2" height="31"/><polygon points="1014,353 1024,353 1019,344"/><rect x="1018" y="257" width="2" height="31"/><polygon points="1014,257 1024,257 1019,248"/><rect x="1018" y="161" width="2" height="31"/><polygon points="1014,161 1024,161 1019,152"/><rect x="1018" y="65" width="2" height="31"/><polygon points="1014,65 1024,65 1019,56"/></g>
+<g stroke="#111" stroke-dasharray="6 4"><path d="M300 124H860M300 220H860M300 316H860M300 412H860"/></g>
+<g fill="#111"><polygon points="860,119 860,129 869,124"/><polygon points="860,215 860,225 869,220"/><polygon points="860,311 860,321 869,316"/><polygon points="860,407 860,417 869,412"/></g>
+<g font-size="13" letter-spacing="1.5" fill="#9A9894" text-anchor="middle"><text x="585" y="116">SKIP</text><text x="585" y="212">SKIP</text><text x="585" y="308">SKIP</text><text x="585" y="404">SKIP</text></g>
+</svg>
+<div class="rail"><div class="l">≠ Existing tools</div><p><b>Most tools:</b> a pure U-Net sees locally and must grow its receptive field with depth. <b>This:</b> every patch sees every other patch in one step.</p><p><b>Most tools:</b> local detail or global context, rarely both. <b>This:</b> ResNet skips keep edges; attention adds the whole-film view.</p></div>
+<p class="cap" style="top:752px"><b>Fig. 2</b> — Hybrid ResNet-34 / Transformer / U-Net. Dashed arrows are skip connections.</p>
+</section>
+
+<!-- 08 BOTTLENECK -->
+<section class="slide" data-sec="METHOD / BOTTLENECK">
+<h2 class="h" style="left:96px;top:104px;width:800px">64 tokens. Global context.</h2>
+<svg class="d" style="left:96px;top:290px" width="811" height="480" viewBox="0 0 811 480" role="img" aria-label="An 8 by 8 grid of tokens with red attention rays of varying weight from one highlighted query token near the left lung field."><title>Self-attention over the 8×8 token grid</title>
+<g stroke="#DDDAD3" stroke-width="44" stroke-dasharray="44 8"><path d="M0 52h412M0 104h412M0 156h412M0 208h412M0 260h412M0 312h412M0 364h412M0 416h412"/></g>
+<g stroke="#E1251B" fill="none"><path d="M126 208L282 208" stroke-width="4"/><path d="M126 208L334 260" stroke-width="3"/><path d="M126 208L334 156" stroke-width="3"/><path d="M126 208L386 208" stroke-width="2"/><path d="M126 208L282 104" stroke-width="2"/><path d="M126 208L74 312" stroke-width="1"/><path d="M126 208L334 364" stroke-width="1"/><path d="M126 208L178 52" stroke-width="1"/></g>
+<g fill="none" stroke="#E1251B"><rect x="260.5" y="186.5" width="43" height="43"/><rect x="312.5" y="238.5" width="43" height="43"/><rect x="312.5" y="134.5" width="43" height="43"/><rect x="364.5" y="186.5" width="43" height="43"/></g>
+<rect x="104" y="186" width="44" height="44" fill="#111"/>
+<text x="104" y="20" font-size="13" letter-spacing="1.5" fill="#111">QUERY TOKEN · LEFT LUNG FIELD</text>
+<text x="0" y="466" font-size="13" letter-spacing="1.5" fill="#9A9894">64 TOKENS = 8 × 8</text>
+<g stroke="#111" stroke-opacity=".2"><path d="M470 30H811M470 110H811M470 190H811M470 270H811M470 350H811M470 430H811"/></g>
+<g font-size="34" font-weight="700" letter-spacing="-.7" fill="#111"><text x="470" y="76">d = 512</text><text x="470" y="156">8 heads</text><text x="470" y="236">d<tspan font-size="22" dy="6">k</tspan><tspan dy="-6"> = 64</tspan></text><text x="470" y="316">FFN 1024</text><text x="470" y="396">GELU</text></g>
+<g font-size="13" letter-spacing="1.5" fill="#9A9894" text-anchor="end"><text x="811" y="76">TOKEN WIDTH</text><text x="811" y="156">PARALLEL ATTENTION</text><text x="811" y="236">512 / 8 PER HEAD</text><text x="811" y="316">FEED-FORWARD</text><text x="811" y="396">ACTIVATION</text></g>
+</svg>
+<div class="col" style="--c:8;--s:3;top:290px"><p class="fm" style="font-size:26px;line-height:1.35"><var>Attn</var>(<var>Q</var>, <var>K</var>, <var>V</var>) =<br>softmax(<var>QK</var><sup>T</sup> / √<var>d</var><sub>k</sub>) <var>V</var></p><p class="b" style="margin-top:28px">Each token receives a weighted mixture of all 64 tokens.</p></div>
+<div class="rail"><div class="l">≠ Existing tools</div><p><b>Most tools:</b> convolutional models reach global context only after many layers, if at all. <b>This:</b> it arrives in one.</p></div>
+<p class="cap" style="top:790px"><b>Fig. 5</b> — Self-attention over the 8×8 bottleneck grid.</p>
+</section>
+
+<!-- 09 LOSS -->
+<section class="slide" data-sec="METHOD / LOSS">
+<h2 class="h" style="left:96px;top:104px;width:800px">Dice doesn’t let you cheat.</h2>
+<svg class="d" style="left:96px;top:290px" width="572" height="360" viewBox="0 0 572 360" role="img" aria-label="Two overlapping circles, predicted P and ground truth G, with the overlap filled red."><title>Dice overlap</title>
+<path d="M260 90.5A130 130 0 0 1 260 309.5A130 130 0 0 1 260 90.5Z" fill="#E1251B"/>
+<circle cx="190" cy="200" r="130" fill="none" stroke="#111"/><circle cx="330" cy="200" r="130" fill="none" stroke="#111"/>
+<text x="150" y="52" text-anchor="middle" font-size="16" fill="#111">|<tspan font-style="italic">P</tspan>| predicted</text><text x="370" y="52" text-anchor="middle" font-size="16" fill="#111">|<tspan font-style="italic">G</tspan>| ground truth</text>
+<text x="260" y="208" text-anchor="middle" font-size="22" font-weight="700" fill="#FFFFFF"><tspan font-style="italic">P</tspan> ∩ <tspan font-style="italic">G</tspan></text>
+</svg>
+<div class="col st hls" style="--c:6;--s:7;top:290px"><p>Dice = 2|<var>P</var> ∩ <var>G</var>| / (|<var>P</var>| + |<var>G</var>|)</p><p><var>L</var><sub>Dice</sub> = 1 − Dice</p><p><var>L</var> = <var>L</var><sub>BCE</sub> + <var>L</var><sub>Dice</sub></p></div>
+<p class="col b" style="--c:6;--s:7;top:560px">Worked example: 100 predicted pixels, 120 true, 90 in common. Dice = 180/220 ≈ 0.82; loss ≈ 0.18. BCE gives smooth early gradients and punishes confident errors. Dice scores region agreement, so a “background everywhere” predictor is punished even when the target is a minority of pixels.</p>
+<p class="cap"><b>Fig. 4</b> — Overlap-based objective.</p>
+</section>
+
+<!-- 10 TRAINING -->
+<section class="slide" data-sec="METHOD / TRAINING">
+<h2 class="h" style="left:96px;top:104px;width:1100px">The training recipe.</h2>
+<i class="a" style="left:96px;top:226px;width:4px;height:529px;background:var(--red)"></i>
+<div class="a" style="left:120px;top:226px;width:1384px">
+<div class="rw"><span class="l g">Input size / batch</span><span class="st">256×256 / 8</span></div>
+<div class="rw"><span class="l g">Encoder</span><span class="st">ResNet-34, ImageNet-pretrained</span></div>
+<div class="rw"><span class="l g">Transformer</span><span class="st">4 layers · 8 heads · d = 512 · FFN 1024</span></div>
+<div class="rw"><span class="l g">Loss</span><span class="st">BCE + Dice</span></div>
+<div class="rw"><span class="l g">Optimizer</span><span class="st">AdamW · lr 3×10⁻⁴ · weight decay 10⁻⁴</span></div>
+<div class="rw"><span class="l g">Schedule / epochs</span><span class="st">Cosine annealing / 20</span></div>
+<div class="rw"><span class="l g">Train / validation</span><span class="st">85% / 15%, seed 42</span></div>
+<div class="rw"><span class="l g">Augmentation</span><span class="st">Horizontal flip, rotation ±10°</span></div>
+</div>
+<p class="cap" style="top:780px;left:120px">Runs on a free-tier NVIDIA T4 GPU in Google Colab.</p>
+</section>
+
+<!-- 11 RESULTS -->
+<section class="slide" data-sec="RESULTS">
+<h2 class="h" style="left:96px;top:104px;width:1100px">Measured, not claimed.</h2>
+<div class="a" style="left:96px;top:200px;width:928px;display:grid;grid-template-columns:repeat(4,1fr);gap:16px">
+<div class="tile"><div class="l g">Dice</div><div class="v">—</div><div class="c">Region overlap</div></div>
+<div class="tile"><div class="l g">IoU</div><div class="v">—</div><div class="c">Intersection / union</div></div>
+<div class="tile"><div class="l g">Precision</div><div class="v">—</div><div class="c">TP / (TP + FP)</div></div>
+<div class="tile"><div class="l g">Recall</div><div class="v">—</div><div class="c">TP / (TP + FN)</div></div>
+<div class="tile"><div class="l g">Box precision (IoU ≥ 0.5)</div><div class="v">—</div><div class="c">Box-level</div></div>
+<div class="tile"><div class="l g">Box recall</div><div class="v">—</div><div class="c">Box-level</div></div>
+<div class="tile"><div class="l g">Box F1 / mean matched IoU</div><div class="v">—</div><div class="c">Greedy match</div></div>
+<div class="tile"><div class="l g">Expected calibration error</div><div class="v">—</div><div class="c">Weighted bin gap</div></div>
+</div>
+<svg class="d" style="left:1051px;top:200px" width="453" height="190" viewBox="0 0 453 190" role="img" aria-label="Empty axes frame for training and validation loss and validation Dice against epoch. No data."><title>Empty training-curve frame</title>
+<g stroke="#DDDAD3"><path d="M96 16V136M136 16V136M176 16V136M216 16V136M256 16V136M56 46H256M56 76H256M56 106H256"/></g>
+<path d="M56.5 16V136.5H256" fill="none" stroke="#111"/>
+<text x="156" y="160" text-anchor="middle" font-size="13" letter-spacing="1.5" fill="#9A9894">EPOCH</text>
+<text transform="translate(26 76) rotate(-90)" text-anchor="middle" font-size="13" letter-spacing="1.5" fill="#9A9894">LOSS · DICE</text>
+</svg>
+<p class="cap" style="left:1051px;top:392px;width:453px"><b>Fig. 3</b> — training and validation loss; validation Dice against epoch. To be populated.</p>
+<div class="ed" style="left:1051px;top:490px;width:453px"><div class="l">→ Earlier detection</div>A Dice score is a proxy for boundary agreement — what a radiologist actually needs is that the outline matches the lesion, not that the pixel count matches.</div>
+<p class="nt r" style="left:1051px;top:680px;width:453px;font-size:18px">Values to be filled from the reference notebook run. No measured values are quoted until the run is complete.</p>
+</section>
+
+<!-- 12 EXPLAINABILITY -->
+<section class="slide" data-sec="EXPLAINABILITY / SUITE">
+<h2 class="h" style="left:96px;top:104px;width:1100px">Five ways to ask why.</h2>
+<div class="a" style="left:96px;top:200px;width:1169.33px;height:370px;display:grid;grid-template-columns:repeat(5,1fr);gap:16px">
+<div class="pn"><svg viewBox="0 0 219 170" width="100%" role="img" aria-label="Heatmap overlay mock"><title>Probability heatmap</title><rect width="219" height="170" fill="#DDDAD3"/><g transform="rotate(-5 70 85)"><ellipse cx="70" cy="85" rx="42" ry="72" fill="#9A9894"/><ellipse cx="70" cy="85" rx="30" ry="56" fill="#E1251B"/><ellipse cx="70" cy="85" rx="14" ry="32" fill="#111"/></g><g transform="rotate(5 149 85)"><ellipse cx="149" cy="85" rx="42" ry="72" fill="#9A9894"/><ellipse cx="149" cy="85" rx="30" ry="56" fill="#E1251B"/><ellipse cx="149" cy="85" rx="14" ry="32" fill="#111"/></g></svg>
+<div class="t"><div class="l"><span class="r">1</span> Probability heatmap</div><p>JET-style map, α = 0.5 over the CLAHE image. Shows the model’s own output, not a gradient attribution.</p></div></div>
+<div class="pn"><svg viewBox="0 0 219 170" width="100%" role="img" aria-label="Seg-Grad-CAM mock"><title>Seg-Grad-CAM</title><rect width="219" height="170" fill="#DDDAD3"/><ellipse cx="70" cy="85" rx="42" ry="72" fill="none" stroke="#9A9894"/><ellipse cx="149" cy="85" rx="42" ry="72" fill="none" stroke="#9A9894"/><ellipse cx="150" cy="118" rx="38" ry="30" fill="#9A9894"/><ellipse cx="150" cy="118" rx="24" ry="18" fill="#E1251B"/><ellipse cx="150" cy="118" rx="10" ry="8" fill="#111"/><ellipse cx="72" cy="70" rx="22" ry="18" fill="#9A9894"/><ellipse cx="72" cy="70" rx="10" ry="8" fill="#E1251B"/></svg>
+<div class="t"><div class="l"><span class="r">2</span> Seg-Grad-CAM</div><p>Decoder-stage activation map, gradient-weighted, ReLU’d, normalised to [0, 1].</p></div></div>
+<div class="pn"><svg viewBox="0 0 219 170" width="100%" role="img" aria-label="Attention rollout mock, an 8 by 8 grid"><title>Attention rollout</title><rect width="219" height="170" fill="#F4F2ED"/><g stroke="#DDDAD3" stroke-width="18" stroke-dasharray="18 2"><path d="M29 14h160M29 34h160M29 54h160M29 74h160M29 94h160M29 114h160M29 134h160M29 154h160"/></g><rect x="49" y="64" width="18" height="18" fill="#9A9894"/><rect x="69" y="64" width="18" height="18" fill="#E1251B"/><rect x="89" y="64" width="18" height="18" fill="#9A9894"/><rect x="69" y="84" width="18" height="18" fill="#9A9894"/><rect x="129" y="64" width="18" height="18" fill="#9A9894"/><rect x="149" y="64" width="18" height="18" fill="#E1251B"/><rect x="149" y="84" width="18" height="18" fill="#9A9894"/><rect x="149" y="44" width="18" height="18" fill="#9A9894"/></svg>
+<div class="t"><div class="l"><span class="r">3</span> Attention rollout</div><p>8×8 token importance. <var>A</var>′ = norm(0.5<var>A</var> + 0.5<var>I</var>), multiplied across layers.</p></div></div>
+<div class="pn"><svg viewBox="0 0 219 170" width="100%" role="img" aria-label="Two uncertainty mini-maps: entropy and TTA standard deviation"><title>Uncertainty</title><rect x="6" y="6" width="100" height="140" fill="#DDDAD3"/><rect x="113" y="6" width="100" height="140" fill="#DDDAD3"/><ellipse cx="56" cy="76" rx="30" ry="52" fill="none" stroke="#E1251B" stroke-width="3"/><ellipse cx="163" cy="76" rx="30" ry="52" fill="none" stroke="#9A9894" stroke-width="3" stroke-dasharray="5 4"/><ellipse cx="166" cy="80" rx="30" ry="52" fill="none" stroke="#111" stroke-width="1" stroke-dasharray="5 4"/><text x="56" y="164" text-anchor="middle" font-size="13" fill="#111"><tspan font-style="italic">H</tspan>(<tspan font-style="italic">p</tspan>)</text><text x="163" y="164" text-anchor="middle" font-size="13" fill="#111">σ (TTA)</text></svg>
+<div class="t"><div class="l"><span class="r">4</span> Uncertainty</div><p>Entropy <var>H</var>(<var>p</var>) and TTA standard deviation, <var>T</var> = 6: flip on/off × −5°, 0°, +5°.</p></div></div>
+<div class="pn"><svg viewBox="0 0 219 170" width="100%" role="img" aria-label="Reliability diagram mock with ten bins and dashed diagonal"><title>Calibration</title><rect width="219" height="170" fill="#F4F2ED"/><g fill="#DDDAD3" stroke="#9A9894"><rect x="45" y="136" width="13" height="4"/><rect x="58" y="120" width="13" height="20"/><rect x="71" y="110" width="13" height="30"/><rect x="84" y="90" width="13" height="50"/><rect x="97" y="88" width="13" height="52"/><rect x="110" y="64" width="13" height="76"/><rect x="123" y="60" width="13" height="80"/><rect x="136" y="36" width="13" height="104"/><rect x="149" y="32" width="13" height="108"/><rect x="162" y="14" width="13" height="126"/></g><path d="M45 140L175 10" stroke="#111" stroke-dasharray="5 4" fill="none"/><path d="M45.5 10V140.5H175" stroke="#111" fill="none"/><text x="110" y="162" text-anchor="middle" font-size="13" letter-spacing="1.5" fill="#9A9894">ECE</text></svg>
+<div class="t"><div class="l"><span class="r">5</span> Calibration</div><p>10-bin reliability diagram, dashed diagonal, ECE.</p></div></div>
+</div>
+<div class="ed" style="left:96px;top:606px;width:740px"><div class="l">→ Earlier detection</div>The uncertainty map marks pixels whose label flips under a trivial perturbation. Those are exactly the borderline opacities a fatigued reader skims past.</div>
+<div class="rail" style="top:200px"><div class="l">≠ Existing tools</div><p><b>Most tools:</b> ship one saliency image, if any. <b>This:</b> five complementary views, including two that say when to distrust the prediction.</p></div>
+<p class="cap"><b>Fig. 5</b> — Composite explanation output (schematic panels, not measured outputs).</p>
+</section>
+
+<!-- 13 REGIONS -->
+<section class="slide" data-sec="DETECTION / REGIONS">
+<h2 class="h" style="left:96px;top:104px;width:1100px">From pixels to regions.</h2>
+<svg class="d" style="left:96px;top:200px" width="1169" height="330" viewBox="0 0 1169 330" role="img" aria-label="Four steps: probability map, threshold at 0.5, connected components with one tiny component struck out, and tight bounding rectangles."><title>Threshold, components, boxes</title>
+<g id="s1"><rect x=".5" y=".5" width="249" height="249" fill="#DDDAD3" stroke="#111"/><ellipse cx="95" cy="95" rx="50" ry="42" fill="#9A9894"/><ellipse cx="95" cy="95" rx="30" ry="25" fill="#E1251B"/><ellipse cx="172" cy="178" rx="34" ry="28" fill="#9A9894"/><ellipse cx="172" cy="178" rx="18" ry="14" fill="#E1251B"/><circle cx="205" cy="58" r="8" fill="#9A9894"/></g>
+<g transform="translate(306.33 0)"><rect x=".5" y=".5" width="249" height="249" fill="#F4F2ED" stroke="#111"/><ellipse cx="95" cy="95" rx="50" ry="42" fill="#111"/><ellipse cx="172" cy="178" rx="34" ry="28" fill="#111"/><circle cx="205" cy="58" r="8" fill="#111"/></g>
+<g transform="translate(612.66 0)"><rect x=".5" y=".5" width="249" height="249" fill="#F4F2ED" stroke="#111"/><ellipse cx="95" cy="95" rx="50" ry="42" fill="#9A9894" stroke="#111"/><ellipse cx="172" cy="178" rx="34" ry="28" fill="#9A9894" stroke="#111"/><circle cx="205" cy="58" r="8" fill="#9A9894" stroke="#111"/><path d="M190 43L220 73M220 43L190 73" stroke="#E1251B" stroke-width="2"/><text x="95" y="100" text-anchor="middle" font-size="16" font-weight="700" fill="#111">1</text><text x="172" y="183" text-anchor="middle" font-size="16" font-weight="700" fill="#111">2</text></g>
+<g transform="translate(919 0)"><rect x=".5" y=".5" width="249" height="249" fill="#F4F2ED" stroke="#111"/><ellipse cx="95" cy="95" rx="50" ry="42" fill="#9A9894"/><ellipse cx="172" cy="178" rx="34" ry="28" fill="#9A9894"/><rect x="45" y="53" width="100" height="84" fill="none" stroke="#111" stroke-width="2"/><rect x="138" y="150" width="68" height="56" fill="none" stroke="#111" stroke-width="2"/></g>
+<g fill="#111"><rect x="258" y="124" width="32" height="2"/><polygon points="290,119 300,125 290,131"/><rect x="564" y="124" width="32" height="2"/><polygon points="596,119 606,125 596,131"/><rect x="870" y="124" width="32" height="2"/><polygon points="902,119 912,125 902,131"/></g>
+<g font-size="16" fill="#111"><text x="0" y="276"><tspan font-weight="700" fill="#E1251B">1</tspan> Probability map <tspan font-style="italic">P</tspan></text><text x="306" y="276"><tspan font-weight="700" fill="#E1251B">2</tspan> Threshold at 0.5</text><text x="613" y="276"><tspan font-weight="700" fill="#E1251B">3</tspan> 8-connected components;</text><text x="613" y="298">discard those under 200 px</text><text x="919" y="276"><tspan font-weight="700" fill="#E1251B">4</tspan> Tightest rectangles,</text><text x="919" y="298">scored by mean probability</text></g>
+</svg>
+<p class="col b" style="--c:1;--s:6;top:560px">A predicted box is a true positive if its IoU with an unmatched ground-truth box is at least 0.5, matched greedily from the highest-scoring prediction. Precision, recall and F1 are computed at box level.</p>
+<p class="nt" style="left:812px;top:560px;width:453px;font-size:22px;line-height:1.35">This is not a trained detector and not COCO-style average precision. Boxes are derived from the segmentation mask.</p>
+<div class="rail"><div class="l">≠ Existing tools</div><p><b>Most tools:</b> segment without localising for the report, or box without a shape. <b>This:</b> contours and boxes from one forward pass.</p></div>
+<p class="cap"><b>Fig. 6</b> — Threshold → connected components → boxes.</p>
+</section>
+
+<!-- 14 CALIBRATION -->
+<section class="slide" data-sec="EXPLAINABILITY / CALIBRATION">
+<h2 class="h" style="left:96px;top:104px;width:1100px">Knowing when to doubt.</h2>
+<svg class="d" style="left:96px;top:210px" width="700" height="580" viewBox="0 0 700 580" role="img" aria-label="Schematic reliability diagram with ten bins and a dashed diagonal. The two bars deviating most are outlined in red."><title>Reliability diagram (schematic)</title>
+<g fill="#DDDAD3" stroke="#9A9894"><rect x="80" y="451" width="44" height="9"/><rect x="124" y="425" width="44" height="35"/><rect x="168" y="354" width="44" height="106"/><rect x="212" y="324" width="44" height="136"/><rect x="256" y="231" width="44" height="229"/><rect x="344" y="143" width="44" height="317"/><rect x="388" y="134" width="44" height="326"/><rect x="432" y="51" width="44" height="409" transform="translate(0 0)"/><rect x="476" y="20" width="44" height="440" transform="translate(0 0)"/></g>
+<rect x="300.5" y="218.5" width="43" height="241" fill="#DDDAD3" stroke="#E1251B" stroke-width="2"/>
+<rect x="388.5" y="134.5" width="43" height="325" fill="#DDDAD3" stroke="#E1251B" stroke-width="2"/>
+<path d="M80 460L520 20" stroke="#111" stroke-dasharray="6 4" fill="none"/>
+<path d="M80.5 20V460.5H520" stroke="#111" fill="none"/>
+<text x="92" y="44" font-size="13" letter-spacing="1.5" fill="#9A9894">SCHEMATIC — NOT MEASURED</text>
+<g font-size="13" fill="#9A9894"><text x="74" y="464" text-anchor="end">0</text><text x="74" y="26" text-anchor="end">1</text><text x="80" y="480" text-anchor="middle">0</text><text x="520" y="480" text-anchor="middle">1</text></g>
+<text x="300" y="512" text-anchor="middle" font-size="16" fill="#111">mean predicted probability</text>
+<text transform="translate(28 240) rotate(-90)" text-anchor="middle" font-size="16" fill="#111">observed fraction of lung pixels</text>
+</svg>
+<div class="col" style="--c:8;--s:5;top:290px"><p style="font-size:28px;line-height:1.3;letter-spacing:-.01em">ECE = Σ<sub><var>b</var></sub> (|<var>B</var><sub><var>b</var></sub>| / <var>n</var>) · |acc(<var>B</var><sub><var>b</var></sub>) − conf(<var>B</var><sub><var>b</var></sub>)|</p>
+<div class="b hls" style="margin-top:36px"><p>A model that says 0.8 should be right about 80% of the time it says 0.8.</p><p>Where it is over-confident, the clinician learns to discount it.</p><p>ECE weights each bin’s gap between confidence and frequency by its size.</p></div></div>
+<p class="cap"><b>Fig. 7</b> — Reliability diagram (schematic). ECE = 0 is perfect calibration.</p>
+</section>
+
+<!-- 15 MATRIX -->
+<section class="slide" data-sec="COMPARISON">
+<h2 class="h" style="left:96px;top:104px;width:1100px">Where we differ.</h2>
+<svg class="d" style="left:96px;top:200px" width="1169" height="480" viewBox="0 0 1169 480" role="img" aria-label="Capability matrix of eight capabilities against five approaches. Red squares mean present, outlined grey squares partial, grey dashes absent."><title>Capability comparison</title>
+<rect x="1011" y="0" width="158" height="480" fill="#DDDAD3"/>
+<g font-size="13" letter-spacing="1.5" fill="#111" text-anchor="middle"><text x="459" y="30">CLASSIFICATION</text><text x="459" y="48">CNN</text><text x="617" y="30">COMMERCIAL</text><text x="617" y="48">CAD SCORE</text><text x="775" y="30">PURE-CNN</text><text x="775" y="48">U-NET</text><text x="932" y="30">BOX</text><text x="932" y="48">DETECTOR</text><text x="1090" y="48" fill="#E1251B" font-weight="700">THIS WORK</text></g>
+<g stroke="#111" stroke-opacity=".2"><path d="M0 64H1169M0 116H1169M0 168H1169M0 220H1169M0 272H1169M0 324H1169M0 376H1169M0 428H1169M0 480H1169"/></g>
+<g font-size="19" fill="#111"><text x="0" y="96">Dense per-pixel output</text><text x="0" y="148">Global context (self-attention)</text><text x="0" y="200">Multiple complementary explanations</text><text x="0" y="252">Predictive uncertainty</text><text x="0" y="304">Calibration reported</text><text x="0" y="356">Region boxes derived for reporting</text><text x="0" y="408">Dataset-swappable to other diseases</text><text x="0" y="460">Reproducible on free hardware</text></g>
+<!-- row 1 -->
+<path d="M449 90h20M607 90h20" stroke="#9A9894"/><rect x="765" y="80" width="20" height="20" fill="#E1251B"/><rect x="923" y="81" width="18" height="18" fill="none" stroke="#9A9894" stroke-width="2"/><rect x="1080" y="80" width="20" height="20" fill="#E1251B"/>
+<!-- row 2 -->
+<path d="M449 142h20M607 142h20M765 142h20M922 142h20" stroke="#9A9894"/><rect x="1080" y="132" width="20" height="20" fill="#E1251B"/>
+<!-- row 3 -->
+<rect x="450" y="185" width="18" height="18" fill="none" stroke="#9A9894" stroke-width="2"/><path d="M607 194h20M765 194h20M922 194h20" stroke="#9A9894"/><rect x="1080" y="184" width="20" height="20" fill="#E1251B"/>
+<!-- row 4 -->
+<path d="M449 246h20M607 246h20M765 246h20M922 246h20" stroke="#9A9894"/><rect x="1080" y="236" width="20" height="20" fill="#E1251B"/>
+<!-- row 5 -->
+<path d="M449 298h20M607 298h20M765 298h20M922 298h20" stroke="#9A9894"/><rect x="1080" y="288" width="20" height="20" fill="#E1251B"/>
+<!-- row 6 -->
+<path d="M449 350h20M607 350h20M765 350h20" stroke="#9A9894"/><rect x="922" y="340" width="20" height="20" fill="#E1251B"/><rect x="1080" y="340" width="20" height="20" fill="#E1251B"/>
+<!-- row 7 -->
+<rect x="449" y="392" width="20" height="20" fill="#E1251B"/><path d="M607 402h20" stroke="#9A9894"/><rect x="765" y="392" width="20" height="20" fill="#E1251B"/><rect x="923" y="393" width="18" height="18" fill="none" stroke="#9A9894" stroke-width="2"/><rect x="1080" y="392" width="20" height="20" fill="#E1251B"/>
+<!-- row 8 -->
+<rect x="449" y="444" width="20" height="20" fill="#E1251B"/><path d="M607 454h20" stroke="#9A9894"/><rect x="765" y="444" width="20" height="20" fill="#E1251B"/><rect x="922" y="444" width="20" height="20" fill="#E1251B"/><rect x="1080" y="444" width="20" height="20" fill="#E1251B"/>
+</svg>
+<svg class="d" style="left:96px;top:700px" width="420" height="24" viewBox="0 0 420 24" role="img" aria-label="Legend: red square present, outlined square partial, dash absent."><title>Legend</title><rect x="0" y="4" width="16" height="16" fill="#E1251B"/><text x="26" y="17" font-size="13" letter-spacing="1.5" fill="#111">PRESENT</text><rect x="141" y="5" width="14" height="14" fill="none" stroke="#9A9894" stroke-width="2"/><text x="166" y="17" font-size="13" letter-spacing="1.5" fill="#111">PARTIAL</text><path d="M276 12h16" stroke="#9A9894"/><text x="302" y="17" font-size="13" letter-spacing="1.5" fill="#111">ABSENT</text></svg>
+<p class="cap" style="top:736px">Comparison is on capability, not on vendor products. Ratings are qualitative. No commercial system is evaluated in this work.</p>
+<div class="rail"><div class="l">≠ Existing tools</div><p><b>Most tools:</b> two or three of these capabilities. <b>This:</b> all eight, in one pipeline, on a free GPU.</p></div>
+<p class="cap"><b>Table</b> — Capability comparison across categories of existing approach.</p>
+</section>
+
+<!-- 16 NOT JUST COVID -->
+<section class="slide" data-sec="PORTABILITY">
+<h2 class="h" style="left:96px;top:92px;width:1100px;font-size:120px">Not just COVID.</h2>
+<div class="l g a" style="left:96px;top:226px">One fixed pipeline</div><div class="l g a" style="left:326px;top:226px">Six tracks, one swap</div>
+<div class="pp" style="top:288px">CLAHE</div><div class="pp" style="top:350px">Encoder</div><div class="pp" style="top:412px">Transformer</div><div class="pp" style="top:474px">Decoder</div><div class="pp" style="top:536px">Explainability</div>
+<svg class="d" style="left:96px;top:288px" width="170" height="296" viewBox="0 0 170 296" aria-hidden="true"><g fill="#111"><polygon points="80,49 90,49 85,58"/><polygon points="80,111 90,111 85,120"/><polygon points="80,173 90,173 85,182"/><polygon points="80,235 90,235 85,244"/></g></svg>
+<svg class="d" style="left:266px;top:244px" width="60" height="384" viewBox="0 0 60 384" role="img" aria-label="Thick red bracket joining the pipeline to six dataset tracks."><title>Pipeline to tracks</title><g stroke="#E1251B" stroke-width="4" fill="none"><path d="M0 188H18"/><path d="M18 32V352"/><path d="M18 32H60M18 96H60M18 160H60M18 224H60M18 288H60M18 352H60"/></g></svg>
+<div class="a" style="left:326px;top:244px;width:939px">
+<div class="trk"><i class="mk"></i><h3>COVID-19</h3><p>QaTa-COV19 · 2,951 expert pixel-level infection masks</p><p>available</p></div>
+<div class="trk"><i class="mk"></i><h3>COVID-19 / other pneumonia</h3><p>COVID-QU-Ex · lung masks for all 33,920; infection masks for 2,913</p><p>available</p></div>
+<div class="trk"><i class="mk"></i><h3>Pneumothorax</h3><p>SIIM-ACR · pixel masks, RLE-encoded</p><p>available, needs a decode step</p></div>
+<div class="trk"><i class="mk"></i><h3>Pneumonia</h3><p>RSNA Pneumonia · bounding boxes only</p><p>coarse rectangular targets</p></div>
+<div class="trk"><i class="mk"></i><h3>Tuberculosis</h3><p>Montgomery / Shenzhen · TB screening sets; lung-field masks, no lesion masks</p><p>lung masks only</p></div>
+<div class="trk"><i class="mk o"></i><h3>Any future disease</h3><p>Any dataset with pixel masks</p><p>requires only pixel masks</p></div>
+</div>
+<p class="col b" style="--c:1;--s:4;top:664px">Nothing in the architecture, loss, training loop or explainability stack changes when the dataset changes.</p>
+<p class="col b" style="--c:5;--s:3;top:664px">Only the list of image–mask pairs does. That is the entire portability argument.</p>
+<div class="ed" style="left:931px;top:664px;width:334px"><div class="l">→ Earlier detection</div>One deployment, retargetable to any pathology with pixel-level annotation — TB, pneumothorax, pneumonia, COVID, fibrosis. No new system per disease.</div>
+<div class="rail"><div class="l">≠ Existing tools</div><p><b>Most tools:</b> one finding per model. <b>This:</b> one pipeline, any pixel-masked pathology.</p><p><b>Most tools:</b> a new disease means a new product. <b>This:</b> a new dataset.</p></div>
+<p class="cap" style="top:836px"><b>Table I</b> — Public chest X-ray datasets with mask-based training, and pipeline portability.</p>
+</section>
+
+<!-- 17 WORKFLOW -->
+<section class="slide" data-sec="WORKFLOW">
+<h2 class="h" style="left:96px;top:100px;width:1408px;font-size:64px;line-height:.92;letter-spacing:-.03em">Earlier detection, in the workflow.</h2>
+<svg class="d" style="left:96px;top:190px" width="1408" height="380" viewBox="0 0 1408 380" role="img" aria-label="Three swimlanes: acquisition, model, radiologist. A red triage branch sends small, low-confidence findings to a priority queue."><title>Reading pathway swimlane</title>
+<g stroke="#111" stroke-opacity=".2"><path d="M0 100H1408M0 240H1408M0 380H1408"/></g>
+<g font-size="13" letter-spacing="1.5" fill="#9A9894"><text x="0" y="22">A · ACQUISITION</text><text x="0" y="122">B · MODEL</text><text x="0" y="262">C · RADIOLOGIST</text></g>
+<g stroke="#111"><rect x="190.5" y="22.5" width="111" height="56" fill="#DDDAD3"/>
+<rect x="325.5" y="134.5" width="111" height="72" fill="#F4F2ED"/><rect x="460.5" y="134.5" width="111" height="72" fill="#F4F2ED"/><rect x="595.5" y="134.5" width="111" height="72" fill="#F4F2ED"/><rect x="730.5" y="134.5" width="111" height="72" fill="#F4F2ED"/><rect x="865.5" y="134.5" width="111" height="72" fill="#F4F2ED"/>
+<rect x="1000.5" y="272.5" width="111" height="88" fill="#F4F2ED"/><rect x="1135.5" y="272.5" width="111" height="88" fill="#F4F2ED"/><rect x="1270.5" y="272.5" width="111" height="88" fill="#F4F2ED"/></g>
+<rect x="866" y="273" width="110" height="87" fill="#F4F2ED" stroke="#E1251B" stroke-width="2"/>
+<g font-size="14" fill="#111"><text x="200" y="46">Radiograph</text><text x="200" y="63">captured</text>
+<text x="335" y="175">CLAHE</text><text x="470" y="164">Probability</text><text x="470" y="181">map</text><text x="605" y="164">Region</text><text x="605" y="181">boxes</text><text x="740" y="164">Explanation</text><text x="740" y="181">suite</text><text x="875" y="155">Uncertainty +</text><text x="875" y="172">calibration</text><text x="875" y="189">flags</text>
+<text x="1010" y="295">Reads film</text><text x="1010" y="312">with overlay;</text><text x="1010" y="329">sees flagged</text><text x="1010" y="346">regions</text><text x="1145" y="311">Corrects or</text><text x="1145" y="328">accepts</text><text x="1280" y="311">Signs</text><text x="1280" y="328">report</text></g>
+<g font-size="14" font-weight="700" fill="#E1251B"><text x="876" y="311">Priority</text><text x="876" y="328">queue</text></g>
+<g fill="#111"><rect x="301" y="49" width="80" height="2"/><rect x="379.5" y="50" width="2" height="76"/><polygon points="375.5,125 385.5,125 380.5,134"/>
+<rect x="436" y="169" width="16" height="2"/><polygon points="452,164 452,176 460,170"/><rect x="571" y="169" width="16" height="2"/><polygon points="587,164 587,176 595,170"/><rect x="706" y="169" width="16" height="2"/><polygon points="722,164 722,176 730,170"/><rect x="841" y="169" width="16" height="2"/><polygon points="857,164 857,176 865,170"/>
+<rect x="976" y="169" width="80" height="2"/><rect x="1054.5" y="170" width="2" height="94"/><polygon points="1050.5,263 1060.5,263 1055.5,272"/>
+<rect x="1111" y="315" width="16" height="2"/><polygon points="1127,310 1127,322 1135,316"/><rect x="1246" y="315" width="16" height="2"/><polygon points="1262,310 1262,322 1270,316"/></g>
+<g fill="#E1251B"><rect x="919.5" y="206" width="2" height="58"/><polygon points="915.5,263 925.5,263 920.5,272"/><rect x="976" y="315" width="16" height="2"/><polygon points="992,310 992,322 1000,316"/></g>
+<text x="850" y="322" text-anchor="end" font-size="16" fill="#E1251B">small lesion · low confidence → prioritise</text>
+</svg>
+<div class="ed" style="left:616px;top:198px;width:780px"><div class="l">→ Earlier detection</div>Triage lifts a small, uncertain lesion to the front of the reading queue instead of leaving it in arrival order.</div>
+<div class="a hls" style="left:96px;top:604px;width:1408px;display:grid;grid-template-columns:repeat(3,1fr);gap:24px;font-size:22px;line-height:1.35">
+<p style="border-top:1px solid var(--hair);padding-top:14px">It directs the eye to a region instead of replacing the eye.</p>
+<p style="border-top:1px solid var(--hair);padding-top:14px">It reports its own uncertainty instead of hiding it.</p>
+<p style="border-top:1px solid var(--hair);padding-top:14px">It is retargetable to new diseases instead of being locked to one.</p></div>
+<p class="cap"><b>Fig. 8</b> — Where the assistant sits in the reading pathway.</p>
+</section>
+
+<!-- 18 LIMITS -->
+<section class="slide" data-sec="LIMITATIONS">
+<h2 class="h" style="left:96px;top:104px;width:1100px">What this is not.</h2>
+<div class="a" style="left:96px;top:200px;width:1408px">
+<div class="r18"><span class="st">The target is <b>ANATOMY</b>, not disease.</span><p>Trained on lung-field masks, the outputs mark where the model believes lung lies. They are not diagnostic.</p></div>
+<div class="r18"><span class="st">Detection is <b>DERIVED</b>, not learned.</span><p>Boxes come from connected components of the predicted mask, not from a trained detector.</p></div>
+<div class="r18"><span class="st">Explanations are <b>NOT clinically validated.</b></span><p>Seg-Grad-CAM and attention rollout have not been compared with radiologists’ judgements.</p></div>
+<div class="r18"><span class="st">The split is <b>INTERNAL.</b></span><p>A random 15% hold-out from two institutions; no external test set.</p></div>
+<div class="r18"><span class="st">The data is <b>SMALL.</b></span><p>Roughly 700 pairs; disease-mask datasets are smaller still.</p></div>
+<div class="r18"><span class="st">The input size is <b>FIXED.</b></span><p>256×256, set by the bottleneck’s positional embedding.</p></div>
+</div>
+<p class="cap" style="top:760px">Research prototype. Not a medical device. Not for clinical use.</p>
+</section>
+
+<!-- 19 NEXT -->
+<section class="slide" data-sec="FUTURE WORK">
+<h2 class="h" style="left:96px;top:104px;width:1100px">What comes next.</h2>
+<svg class="d" style="left:96px;top:290px" width="1408" height="120" viewBox="0 0 1408 120" role="img" aria-label="Roadmap axis with five square markers numbered 1 to 5."><title>Roadmap</title>
+<rect x="0" y="95" width="1408" height="2" fill="#111"/>
+<g font-size="64" font-weight="700" letter-spacing="-2.5" fill="#111"><text x="0" y="68">01</text><text x="286.4" y="68">02</text><text x="572.8" y="68">03</text><text x="859.2" y="68">04</text><text x="1145.6" y="68">05</text></g>
+<g fill="#111"><rect x="0" y="87" width="18" height="18"/><rect x="286.4" y="87" width="18" height="18"/><rect x="572.8" y="87" width="18" height="18"/><rect x="859.2" y="87" width="18" height="18"/><rect x="1145.6" y="87" width="18" height="18"/></g>
+<polygon points="1408,90 1408,102 1400,96" fill="#111" opacity="0"/>
+</svg>
+<div class="rm" style="left:96px"><h3>Retrain on disease masks</h3><p>QaTa-COV19’s 2,951 infection masks.</p></div>
+<div class="rm" style="left:382.4px"><h3>Run the ablations</h3><p>Hybrid vs CNN-only U-Net vs no-CLAHE, over several seeds; mean ± standard deviation.</p></div>
+<div class="rm" style="left:668.8px"><h3>Test explanation faithfulness</h3><p>Does Seg-Grad-CAM actually localise the lesion?</p></div>
+<div class="rm" style="left:955.2px"><h3>External validation</h3><p>Cross-institution and cross-dataset evaluation.</p></div>
+<div class="rm" style="left:1241.6px"><h3>Variable input size</h3><p>Remove the fixed 256×256 positional-embedding constraint.</p></div>
+<p class="cap"><b>Fig. 9</b> — Principal directions for future work.</p>
+</section>
+
+<!-- 20 CLOSING -->
+<section class="slide" data-sec="CLOSING">
+<h2 class="h" style="left:96px;top:96px;width:931px;font-size:72px">The output is the explanation.</h2>
+<p class="a st" style="left:96px;top:236px;width:1408px">CLAHE. A ResNet-34 / Transformer / U-Net hybrid. BCE + Dice. Region boxes derived from the mask. Five complementary explanations. Runs on free hardware. Retargetable to any disease with pixel masks.</p>
+<i class="a" style="left:0;right:0;top:360px;height:2px;background:var(--ink)"></i>
+<div class="col b" style="--c:1;--s:4;top:396px">M Ninad Suryaksha<br>J Mohammad Mudassir<br>Anupal Maji<p class="g" style="margin-top:14px;font-size:16px;line-height:1.35">Dept. of CSE, Alliance University, Bengaluru, India</p></div>
+<div class="a" style="left:573px;top:396px;width:931px;columns:2;column-gap:24px;font-size:13px;line-height:1.5;color:var(--gm)">
+<p>[1] Ronneberger et al. U-Net. MICCAI 2015.</p><p>[2] He et al. ResNet. CVPR 2016.</p><p>[3] Vaswani et al. Transformer. NeurIPS 2017.</p><p>[4] Dosovitskiy et al. ViT. ICLR 2021.</p><p>[5] Chen et al. TransUNet. arXiv 2021.</p><p>[7] Zuiderveld. CLAHE. 1994.</p><p>[10] Milletari et al. V-Net, Dice. 3DV 2016.</p><p>[11] Selvaraju et al. Grad-CAM. ICCV 2017.</p><p>[12] Vinogradova et al. Seg-Grad-CAM. AAAI 2020.</p><p>[13] Abnar, Zuidema. Attention rollout. ACL 2020.</p><p>[14] Wang et al. TTA uncertainty. 2019.</p><p>[15] Guo et al. Calibration. ICML 2017.</p><p>[16] Jaeger et al. Montgomery, Shenzhen. 2014.</p><p>[17] Candemir et al. Lung segmentation. 2014.</p><p>[18] Pandey. Chest X-ray masks. Kaggle.</p><p>[21] Degerli et al. QaTa-COV19. 2021.</p></div>
+<i class="a" style="left:1464px;top:800px;width:40px;height:40px;background:var(--red)"></i>
+</section>
+
+<div id="grid" aria-hidden="true"></div>
+</div></div>
+
+<div id="ov" aria-label="Slide overview" role="dialog"></div>
+<nav id="bar" aria-label="Slide controls">
+<span id="ctr" aria-live="polite">01 / 20</span>
+<div id="prog" role="progressbar" aria-label="Deck progress" aria-valuemin="1" aria-valuemax="20" aria-valuenow="1"><i></i></div>
+<span class="hint">O overview · G grid · P print</span>
+<button id="prev" aria-label="Previous slide">← Prev</button>
+<button id="next" aria-label="Next slide">Next →</button>
+</nav>
+
+<script>
+(function(){
+var slides=[].slice.call(document.querySelectorAll('.slide')),N=slides.length,cur=0;
+var stage=document.getElementById('stage'),wrap=document.getElementById('wrap'),ctr=document.getElementById('ctr'),
+    prog=document.querySelector('#prog i'),progBox=document.getElementById('prog'),ov=document.getElementById('ov'),grid=document.getElementById('grid');
+function pad(n){return (n<10?'0':'')+n}
+slides.forEach(function(s,i){
+  var h=document.createElement('div');h.className='hdr';
+  h.innerHTML='<span class="l lab">'+pad(i+1)+' — '+s.getAttribute('data-sec')+'</span><span class="l mark">IRA · HYBRID SEG</span><i class="hr"></i>';
+  s.insertBefore(h,s.firstChild);
+  [].slice.call(s.children).forEach(function(c,k){c.style.setProperty('--i',Math.min(k,10))});
+  s.setAttribute('role','region');s.setAttribute('aria-roledescription','slide');
+  s.setAttribute('aria-label','Slide '+(i+1)+' of '+N+': '+s.getAttribute('data-sec'));
+});
+for(var k=0;k<12;k++){var c=document.createElement('i');c.style.left=(96+k*119.3333)+'px';grid.appendChild(c)}
+function fit(){var s=Math.min(wrap.clientWidth/1600,wrap.clientHeight/900);stage.style.transform='scale('+s+')'}
+function go(n,noHash){
+  n=Math.max(0,Math.min(N-1,n));
+  slides[cur].classList.remove('active');slides[cur].setAttribute('aria-hidden','true');
+  cur=n;slides[cur].classList.add('active');slides[cur].removeAttribute('aria-hidden');
+  ctr.textContent=pad(cur+1)+' / '+N;prog.style.width=(cur/(N-1)*100)+'%';progBox.setAttribute('aria-valuenow',cur+1);
+  if(!noHash&&history.replaceState)history.replaceState(null,'','#'+(cur+1));
+  if(ov.classList.contains('on'))markOv();
+}
+function markOv(){[].slice.call(ov.children).forEach(function(t,i){t.classList.toggle('cur',i===cur)})}
+function buildOv(){
+  slides.forEach(function(s,i){
+    var b=document.createElement('button');b.className='thumb';b.setAttribute('aria-label','Go to slide '+(i+1)+': '+s.getAttribute('data-sec'));
+    var c=s.cloneNode(true);c.classList.remove('active');b.appendChild(c);
+    b.addEventListener('click',function(){toggleOv(false);go(i)});ov.appendChild(b);
+  });
+}
+function toggleOv(on){
+  if(on===undefined)on=!ov.classList.contains('on');
+  if(on&&!ov.children.length)buildOv();
+  ov.classList.toggle('on',on);if(on)markOv();
+}
+var buf='',bt;
+document.addEventListener('keydown',function(e){
+  if(e.metaKey||e.ctrlKey||e.altKey)return;
+  var k=e.key,onBtn=e.target&&e.target.tagName==='BUTTON';
+  if(k==='Escape'){toggleOv(false);return}
+  if(k==='o'||k==='O'){toggleOv();e.preventDefault();return}
+  if(k==='g'||k==='G'){grid.classList.toggle('on');return}
+  if(k==='p'||k==='P'){window.print();return}
+  if(ov.classList.contains('on')&&(k===' '||k==='Enter'))return;
+  if(k==='ArrowRight'||k==='ArrowDown'||k==='PageDown'||(k===' '&&!onBtn)){go(cur+1);e.preventDefault()}
+  else if(k==='ArrowLeft'||k==='ArrowUp'||k==='PageUp'){go(cur-1);e.preventDefault()}
+  else if(k==='Home'){go(0);e.preventDefault()}
+  else if(k==='End'){go(N-1);e.preventDefault()}
+  else if(/^[0-9]$/.test(k)){buf+=k;clearTimeout(bt);bt=setTimeout(function(){var n=parseInt(buf,10);buf='';if(n>=1)go(n-1)},550)}
+});
+document.getElementById('prev').addEventListener('click',function(){go(cur-1)});
+document.getElementById('next').addEventListener('click',function(){go(cur+1)});
+window.addEventListener('resize',fit);fit();
+slides.forEach(function(s){s.setAttribute('aria-hidden','true')});
+var start=parseInt((location.hash||'').slice(1),10);
+cur=0;slides[0].classList.add('active');go(isNaN(start)?0:start-1,true);
+window.addEventListener('beforeprint',function(){slides.forEach(function(s){s.removeAttribute('aria-hidden')})});
+})();
+</script>
+</body>
+</html>
